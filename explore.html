@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>OPTIONS — ADBE</title>
+<style>
+  /* ============================================================ *
+   *  Bauhaus-inspired option-strategy explorer.
+   *  Helvetica · primary-color accents · grid-aligned · whitespace.
+   * ============================================================ */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --red:    #E63946;
+    --blue:   #1D3557;
+    --yellow: #F4C430;
+    --black:  #111111;
+    --white:  #FFFFFF;
+    --ink:    #1A1A1A;
+    --rule:   #1A1A1A;
+    --mute:   #767676;
+    --pale:   #F2F0EA;
+  }
+
+  html, body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-weight: 400;
+    background: var(--white);
+    color: var(--ink);
+    line-height: 1.35;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    min-height: 100vh;
+    padding: 40px 56px;
+    max-width: 1440px;
+    margin: 0 auto;
+  }
+
+  /* ----------------------------- Header ----------------------------- */
+  header {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: end;
+    gap: 24px;
+    padding-bottom: 24px;
+    border-bottom: 2px solid var(--ink);
+  }
+  .brand h1 {
+    font-size: 56px;
+    line-height: 0.95;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .brand .subtitle {
+    margin-top: 6px;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--mute);
+  }
+  .ticker {
+    text-align: right;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--mute);
+  }
+  .ticker .symbol {
+    color: var(--ink);
+    font-weight: 700;
+  }
+  .ticker .price {
+    display: block;
+    font-size: 32px;
+    color: var(--ink);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin-top: 4px;
+  }
+  .ticker .delta {
+    color: var(--red);
+    font-weight: 700;
+  }
+
+  /* ----------------------------- Strategy selector ----------------------------- */
+  .selector {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-top: 32px;
+  }
+  .tile {
+    position: relative;
+    display: block;
+    width: 100%;
+    aspect-ratio: 1.6 / 1;
+    background: var(--pale);
+    border: 2px solid var(--ink);
+    cursor: pointer;
+    text-align: left;
+    padding: 18px 20px;
+    font-family: inherit;
+    transition: background-color 0.15s ease, color 0.15s ease;
+    overflow: hidden;
+  }
+  .tile:focus-visible {
+    outline: 3px solid var(--ink);
+    outline-offset: 3px;
+  }
+  .tile .num {
+    font-size: 13px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+  .tile .name {
+    font-size: 22px;
+    line-height: 1.05;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin-top: 8px;
+    max-width: 70%;
+  }
+  .tile .glyph {
+    position: absolute;
+    right: 14px;
+    bottom: 12px;
+    width: 56px;
+    height: 56px;
+  }
+  .tile .stance {
+    position: absolute;
+    left: 20px;
+    bottom: 14px;
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--mute);
+  }
+  .tile.is-active.t1 { background: var(--red);    color: var(--white); }
+  .tile.is-active.t2 { background: var(--blue);   color: var(--white); }
+  .tile.is-active.t3 { background: var(--yellow); color: var(--black); }
+  .tile.is-active.t4 { background: var(--black);  color: var(--white); }
+  .tile.is-active .stance { color: inherit; opacity: 0.7; }
+
+  /* ----------------------------- Main panel ----------------------------- */
+  .panel {
+    margin-top: 32px;
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    gap: 48px;
+    padding-top: 32px;
+    border-top: 2px solid var(--ink);
+  }
+
+  /* Chart side */
+  .chart-wrap { position: relative; }
+  .chart-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--mute);
+    margin-bottom: 12px;
+  }
+  svg.pnl {
+    width: 100%;
+    height: 380px;
+    display: block;
+    background: var(--white);
+  }
+  svg.pnl text {
+    font-family: inherit;
+    font-size: 11px;
+    fill: var(--mute);
+    letter-spacing: 0.05em;
+  }
+  svg.pnl .axis line {
+    stroke: var(--ink);
+    stroke-width: 1;
+  }
+  svg.pnl .grid line {
+    stroke: var(--ink);
+    stroke-width: 0.5;
+    opacity: 0.12;
+  }
+  svg.pnl .zero {
+    stroke: var(--ink);
+    stroke-width: 1.5;
+  }
+  svg.pnl .pnl-line {
+    stroke-width: 3;
+    fill: none;
+  }
+  svg.pnl .pnl-fill {
+    opacity: 0.10;
+  }
+  svg.pnl .marker-line {
+    stroke: var(--ink);
+    stroke-dasharray: 4 4;
+    stroke-width: 1;
+  }
+  svg.pnl .marker-dot {
+    fill: var(--ink);
+  }
+
+  /* Detail side */
+  .detail h2 {
+    font-size: 28px;
+    line-height: 1.05;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .detail .tagline {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--mute);
+    margin-top: 6px;
+  }
+  .struct {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px 24px;
+    margin-top: 24px;
+    padding: 20px 0;
+    border-top: 1px solid var(--ink);
+    border-bottom: 1px solid var(--ink);
+  }
+  .struct .label {
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--mute);
+  }
+  .struct .value {
+    font-size: 20px;
+    font-weight: 700;
+    margin-top: 2px;
+    letter-spacing: -0.01em;
+  }
+  .struct .value.up   { color: var(--red); }
+  .struct .value.down { color: var(--blue); }
+  .struct .value.neutral { color: var(--ink); }
+
+  .desc {
+    margin-top: 24px;
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--ink);
+  }
+  .desc strong {
+    font-weight: 700;
+    background: var(--yellow);
+    padding: 0 4px;
+  }
+  .when-fits {
+    margin-top: 18px;
+    font-size: 13px;
+    color: var(--ink);
+    padding-left: 14px;
+    border-left: 4px solid var(--ink);
+  }
+
+  /* ----------------------------- Slider area ----------------------------- */
+  .controls {
+    margin-top: 40px;
+    padding-top: 28px;
+    border-top: 2px solid var(--ink);
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 48px;
+    align-items: end;
+  }
+  .price-control {
+    display: flex;
+    flex-direction: column;
+  }
+  .price-control .label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 10px;
+  }
+  .price-control .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--mute);
+  }
+  .price-control .current {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    background: var(--ink);
+    outline: none;
+  }
+  .slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 22px;
+    height: 22px;
+    background: var(--white);
+    border: 2px solid var(--ink);
+    border-radius: 50%;
+    cursor: pointer;
+  }
+  .slider::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+    background: var(--white);
+    border: 2px solid var(--ink);
+    border-radius: 50%;
+    cursor: pointer;
+  }
+
+  .price-axis {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--mute);
+    margin-top: 8px;
+    letter-spacing: 0.05em;
+  }
+
+  /* P&L readout block */
+  .readout {
+    background: var(--ink);
+    color: var(--white);
+    padding: 22px 24px;
+  }
+  .readout .label {
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--white);
+    opacity: 0.6;
+  }
+  .readout .pnl-value {
+    font-size: 38px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-top: 6px;
+  }
+  .readout .pnl-pct {
+    font-size: 13px;
+    margin-top: 4px;
+    opacity: 0.7;
+  }
+  .readout .pnl-value.green { color: #5BFFA8; }
+  .readout .pnl-value.red   { color: #FF6464; }
+
+  /* Scenarios row */
+  .scenarios {
+    margin-top: 18px;
+    display: flex;
+    gap: 8px;
+  }
+  .scenario {
+    flex: 1;
+    padding: 10px 12px;
+    background: var(--white);
+    border: 1px solid var(--ink);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    cursor: pointer;
+    text-align: center;
+    font-family: inherit;
+    color: var(--ink);
+    transition: background 0.15s, color 0.15s;
+  }
+  .scenario:hover { background: var(--pale); }
+  .scenario .target {
+    display: block;
+    margin-top: 4px;
+    font-size: 13px;
+    letter-spacing: 0;
+    font-weight: 700;
+    text-transform: none;
+  }
+
+  /* Inputs (editable params) */
+  .params {
+    margin-top: 28px;
+    padding-top: 24px;
+    border-top: 1px solid var(--ink);
+  }
+  .params h3 {
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--mute);
+    margin-bottom: 14px;
+  }
+  .param-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+  .param {
+    display: flex;
+    flex-direction: column;
+  }
+  .param label {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--mute);
+  }
+  .param input {
+    font-family: inherit;
+    font-size: 18px;
+    font-weight: 700;
+    border: none;
+    border-bottom: 2px solid var(--ink);
+    background: transparent;
+    padding: 6px 0;
+    color: var(--ink);
+    width: 100%;
+  }
+  .param input:focus {
+    outline: none;
+    border-bottom-color: var(--red);
+  }
+
+  /* Footer */
+  footer {
+    margin-top: 48px;
+    padding-top: 20px;
+    border-top: 1px solid var(--ink);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--mute);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  /* Bauhaus rule of geometric squares (decorative) */
+  .bauhaus-rule {
+    display: flex;
+    gap: 0;
+    margin: 24px 0 0;
+  }
+  .bauhaus-rule span {
+    height: 6px;
+    flex: 1;
+  }
+
+  @media (max-width: 980px) {
+    body { padding: 24px 20px; }
+    .brand h1 { font-size: 40px; }
+    .selector { grid-template-columns: repeat(2, 1fr); }
+    .panel { grid-template-columns: 1fr; gap: 32px; }
+    .controls { grid-template-columns: 1fr; gap: 24px; }
+    .param-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <h1>OPTIONS<span style="color:var(--red);">.</span></h1>
+    <div class="subtitle">ADBE strategy explorer · April 2026</div>
+    <div class="bauhaus-rule" aria-hidden="true">
+      <span style="background:var(--red);"></span>
+      <span style="background:var(--blue);"></span>
+      <span style="background:var(--yellow);"></span>
+      <span style="background:var(--black);"></span>
+    </div>
+  </div>
+  <div class="ticker">
+    <span class="symbol">ADBE</span> · NASDAQ
+    <span class="price" id="liveTicker">$245.44</span>
+    <span class="delta">−41.7% from 52w high</span>
+  </div>
+</header>
+
+<!-- Strategy tiles -->
+<nav class="selector" role="tablist" aria-label="Option strategies">
+  <button class="tile t1 is-active" data-strategy="1" role="tab">
+    <div class="num">01</div>
+    <div class="name">Bull call spread</div>
+    <div class="stance">Defined · 8 months</div>
+    <svg class="glyph" viewBox="0 0 56 56" aria-hidden="true">
+      <rect x="4" y="20" width="48" height="16" fill="currentColor"/>
+    </svg>
+  </button>
+  <button class="tile t2" data-strategy="2" role="tab">
+    <div class="num">02</div>
+    <div class="name">LEAPS call</div>
+    <div class="stance">Long · 20 months</div>
+    <svg class="glyph" viewBox="0 0 56 56" aria-hidden="true">
+      <circle cx="28" cy="28" r="22" fill="currentColor"/>
+    </svg>
+  </button>
+  <button class="tile t3" data-strategy="3" role="tab">
+    <div class="num">03</div>
+    <div class="name">Cash-secured put</div>
+    <div class="stance">Income · 8 months</div>
+    <svg class="glyph" viewBox="0 0 56 56" aria-hidden="true">
+      <polygon points="28,6 52,50 4,50" fill="currentColor"/>
+    </svg>
+  </button>
+  <button class="tile t4" data-strategy="4" role="tab">
+    <div class="num">04</div>
+    <div class="name">Diagonal call</div>
+    <div class="stance">Active · 20 months</div>
+    <svg class="glyph" viewBox="0 0 56 56" aria-hidden="true">
+      <rect x="22" y="4" width="12" height="48" fill="currentColor"/>
+      <rect x="4" y="22" width="48" height="12" fill="currentColor"/>
+    </svg>
+  </button>
+</nav>
+
+<!-- Main panel: chart + detail -->
+<section class="panel">
+  <div class="chart-wrap">
+    <div class="chart-title">Profit / Loss at expiry · per share (× 100 = per contract)</div>
+    <svg class="pnl" id="pnlChart" viewBox="0 0 700 380" preserveAspectRatio="none"></svg>
+  </div>
+  <div class="detail">
+    <h2 id="detailName">Bull call spread</h2>
+    <div class="tagline" id="detailTagline">Buy $245 call · Sell $310 call · Jan 2027</div>
+
+    <div class="struct">
+      <div>
+        <div class="label">Max upside</div>
+        <div class="value up" id="maxUp">+$45.00</div>
+      </div>
+      <div>
+        <div class="label">Max downside</div>
+        <div class="value down" id="maxDown">−$20.00</div>
+      </div>
+      <div>
+        <div class="label">Breakeven</div>
+        <div class="value neutral" id="breakeven">$265</div>
+      </div>
+      <div>
+        <div class="label">Time horizon</div>
+        <div class="value neutral" id="timeHorizon">8 months</div>
+      </div>
+    </div>
+
+    <p class="desc" id="detailDesc"></p>
+    <p class="when-fits" id="whenFits"></p>
+  </div>
+</section>
+
+<!-- Controls: price slider + readout -->
+<section class="controls">
+  <div class="price-control">
+    <div class="label-row">
+      <div class="label">ADBE @ Expiry</div>
+      <div class="current">$<span id="priceLabel">245</span></div>
+    </div>
+    <input type="range" min="80" max="500" value="245" step="1" class="slider" id="priceSlider" />
+    <div class="price-axis">
+      <span>$80</span><span>$200</span><span>$300</span><span>$400</span><span>$500</span>
+    </div>
+    <div class="scenarios">
+      <button class="scenario" data-price="180">Bear<span class="target">$180</span></button>
+      <button class="scenario" data-price="245">Now<span class="target">$245</span></button>
+      <button class="scenario" data-price="310">Recovery<span class="target">$310</span></button>
+      <button class="scenario" data-price="340">Analyst PT<span class="target">$340</span></button>
+      <button class="scenario" data-price="420">52w high<span class="target">$420</span></button>
+    </div>
+  </div>
+
+  <div class="readout">
+    <div class="label">Your P&L</div>
+    <div class="pnl-value neutral" id="pnlValue">$0</div>
+    <div class="pnl-pct" id="pnlPct">on $1,000 deployed</div>
+  </div>
+</section>
+
+<!-- Editable parameters -->
+<section class="params">
+  <h3>Strategy parameters · edit to plug in your real chain quotes</h3>
+  <div class="param-grid" id="paramGrid"></div>
+</section>
+
+<footer>
+  <span>Educational · not financial advice · premiums illustrative</span>
+  <span>Bauhaus options · helvetica</span>
+</footer>
+
+<script>
+'use strict';
+
+/* =====================================================================
+ *   Strategy definitions
+ *
+ *   Each strategy returns:
+ *     pnl(S)   — P&L at expiry given underlying stock price S
+ *     params   — editable inputs (strike(s), premium(s), term)
+ *     stats    — derived numbers (maxUp, maxDown, breakeven, time)
+ *     name, tag, color, desc, whenFits
+ * ===================================================================== */
+
+const COLORS = { red: '#E63946', blue: '#1D3557', yellow: '#F4C430', black: '#111111' };
+
+/** Format a number as currency with sign & 2dp. */
+function fmt$(v, opts = {}) {
+  const n = Number.isFinite(v) ? v : 0;
+  const sign = opts.sign && n > 0 ? '+' : (n < 0 ? '−' : (opts.sign ? '+' : ''));
+  return sign + '$' + Math.abs(n).toFixed(opts.dp ?? 2);
+}
+
+const strategies = {
+  /* ---- 1. Bull call spread ---- */
+  '1': {
+    name: 'Bull call spread',
+    tag: 'Buy ATM call · Sell OTM call · defined risk',
+    color: COLORS.red,
+    fields: [
+      { key: 'longK',   label: 'Long strike',   default: 245, prefix: '$' },
+      { key: 'shortK',  label: 'Short strike',  default: 310, prefix: '$' },
+      { key: 'debit',   label: 'Net debit',     default: 20,  prefix: '$' },
+      { key: 'months',  label: 'Months to exp', default: 8 },
+    ],
+    pnl(S, p) {
+      if (S <= p.longK) return -p.debit;
+      if (S >= p.shortK) return (p.shortK - p.longK) - p.debit;
+      return (S - p.longK) - p.debit;
+    },
+    stats(p) {
+      return {
+        maxUp:   (p.shortK - p.longK) - p.debit,
+        maxDown: -p.debit,
+        breakeven: p.longK + p.debit,
+        time: p.months + ' months',
+      };
+    },
+    desc(p) {
+      return `Pay <strong>${fmt$(p.debit, {dp:0})}</strong> upfront for the right to capture moves between <strong>$${p.longK}</strong> and <strong>$${p.shortK}</strong>. Caps your upside at <strong>${fmt$((p.shortK-p.longK)-p.debit, {sign:true, dp:0})}</strong>; caps your loss at the premium paid. The trade-off you make for cheaper exposure than a naked call.`;
+    },
+    whenFits: 'Aligns with our +14.7% mean 1y return on prior ADBE DV+P+FT fires. The spread caps the rip-past-PT scenario but pays you ~3:1 if ADBE recovers to analyst-target territory.',
+  },
+
+  /* ---- 2. LEAPS call ---- */
+  '2': {
+    name: 'LEAPS call',
+    tag: 'Long-dated ITM call · concentrated bullish',
+    color: COLORS.blue,
+    fields: [
+      { key: 'strike',  label: 'Strike',        default: 220, prefix: '$' },
+      { key: 'premium', label: 'Premium',       default: 50,  prefix: '$' },
+      { key: 'months',  label: 'Months to exp', default: 20 },
+    ],
+    pnl(S, p) {
+      if (S <= p.strike) return -p.premium;
+      return (S - p.strike) - p.premium;
+    },
+    stats(p) {
+      return {
+        maxUp:   Infinity,
+        maxDown: -p.premium,
+        breakeven: p.strike + p.premium,
+        time: p.months + ' months',
+      };
+    },
+    desc(p) {
+      return `Buy a single deep-ITM call expiring ${p.months} months out. Pay <strong>${fmt$(p.premium, {dp:0})}</strong> for ~80% delta exposure to the underlying. Above <strong>$${p.strike + p.premium}</strong>, every dollar of stock-rise is a dollar of profit, uncapped. Below the strike, you lose the premium.`;
+    },
+    whenFits: 'Most-aligned with our 3-5y ADBE pattern (median +218% over 5y, 100% hit-rate). The 20-month tenor lets the Wadhwani-CEO + NVIDIA-partnership arc actually play out. Costs more but no upside cap.',
+  },
+
+  /* ---- 3. Cash-secured put ---- */
+  '3': {
+    name: 'Cash-secured put',
+    tag: 'Sell put · collect premium · accept assignment',
+    color: COLORS.yellow,
+    fields: [
+      { key: 'strike',  label: 'Put strike',    default: 220, prefix: '$' },
+      { key: 'premium', label: 'Premium',       default: 17,  prefix: '$' },
+      { key: 'months',  label: 'Months to exp', default: 8 },
+    ],
+    pnl(S, p) {
+      if (S >= p.strike) return p.premium;
+      return p.premium - (p.strike - S);
+    },
+    stats(p) {
+      return {
+        maxUp:   p.premium,
+        maxDown: -(p.strike - p.premium),
+        breakeven: p.strike - p.premium,
+        time: p.months + ' months',
+      };
+    },
+    desc(p) {
+      return `Sell a put at <strong>$${p.strike}</strong>, collect <strong>${fmt$(p.premium, {dp:0})}</strong> upfront. If ADBE stays above <strong>$${p.strike}</strong>, keep the premium. If it drops below, you're assigned shares at <strong>$${p.strike}</strong> — effective cost basis <strong>$${p.strike - p.premium}</strong>. You're paid to wait for a 10% pullback you'd happily buy.`;
+    },
+    whenFits: 'High implied volatility right now (post-CEO news, pre-earnings) makes premium-selling especially profitable. Both outcomes — keep premium or buy ADBE at a real discount — are wins for a 5y bull. The only "loss" is missing further upside if ADBE rips.',
+  },
+
+  /* ---- 4. Diagonal call spread ---- */
+  '4': {
+    name: 'Diagonal call',
+    tag: 'LEAPS + monthly OTM calls · capital-efficient',
+    color: COLORS.black,
+    fields: [
+      { key: 'strike',     label: 'LEAPS strike',     default: 220, prefix: '$' },
+      { key: 'premium',    label: 'LEAPS premium',    default: 50,  prefix: '$' },
+      { key: 'capStrike',  label: 'Short call strike',default: 300, prefix: '$' },
+      { key: 'monthlyPrem',label: 'Monthly $ collected', default: 4, prefix: '$' },
+      { key: 'months',     label: 'Months to roll',   default: 12 },
+    ],
+    pnl(S, p) {
+      const collected = p.monthlyPrem * p.months;
+      const longPnL = S <= p.strike ? -p.premium : (S - p.strike) - p.premium;
+      // Cap at short strike: above this, short calls eat the upside
+      const capLevel = (p.capStrike - p.strike) - p.premium;
+      return Math.min(longPnL, capLevel) + collected;
+    },
+    stats(p) {
+      const collected = p.monthlyPrem * p.months;
+      const capLevel = (p.capStrike - p.strike) - p.premium;
+      return {
+        maxUp:   capLevel + collected,
+        maxDown: -p.premium + collected,
+        breakeven: p.strike + p.premium - collected,
+        time: p.months + ' months',
+      };
+    },
+    desc(p) {
+      const collected = p.monthlyPrem * p.months;
+      return `Buy a deep-ITM LEAPS at <strong>$${p.strike}</strong>. Each month, sell an OTM call at <strong>$${p.capStrike}</strong> to harvest premium (~<strong>${fmt$(p.monthlyPrem, {dp:0})}</strong>/share/mo). Over <strong>${p.months}</strong> months, collect <strong>${fmt$(collected, {dp:0})}</strong> total — reducing your effective cost. Upside is capped per cycle at the short strike.`;
+    },
+    whenFits: 'Best for active managers who want LEAPS-style 3-5y exposure with the cost reduced by income from monthly cycles. The trade-off: caps upside above the short strike each month. Requires discipline to roll up-and-out if ADBE rips fast.',
+  },
+};
+
+/* =====================================================================
+ *   State
+ * ===================================================================== */
+let state = {
+  active: '1',
+  price: 245,
+  params: {
+    '1': { longK: 245, shortK: 310, debit: 20, months: 8 },
+    '2': { strike: 220, premium: 50, months: 20 },
+    '3': { strike: 220, premium: 17, months: 8 },
+    '4': { strike: 220, premium: 50, capStrike: 300, monthlyPrem: 4, months: 12 },
+  },
+};
+
+/* =====================================================================
+ *   SVG chart
+ * ===================================================================== */
+
+const W = 700, H = 380;
+const PAD = { top: 30, right: 40, bottom: 40, left: 50 };
+const PLOT_W = W - PAD.left - PAD.right;
+const PLOT_H = H - PAD.top - PAD.bottom;
+
+const X_MIN = 80, X_MAX = 500;
+
+function xScale(v) { return PAD.left + ((v - X_MIN) / (X_MAX - X_MIN)) * PLOT_W; }
+function yScale(v, yMin, yMax) {
+  return PAD.top + (1 - (v - yMin) / (yMax - yMin)) * PLOT_H;
+}
+
+function buildChart() {
+  const strat = strategies[state.active];
+  const params = state.params[state.active];
+
+  // Sample P&L over price grid
+  const samples = [];
+  const SAMPLES = 240;
+  for (let i = 0; i <= SAMPLES; i++) {
+    const S = X_MIN + (X_MAX - X_MIN) * (i / SAMPLES);
+    samples.push({ x: S, y: strat.pnl(S, params) });
+  }
+
+  // Y-domain with some headroom
+  const yVals = samples.map(s => s.y).filter(v => Number.isFinite(v));
+  let yMin = Math.min(...yVals, -10);
+  let yMax = Math.max(...yVals, 10);
+  // For LEAPS (uncapped upside) clamp to reasonable view
+  if (yMax > 250) yMax = 250;
+  // Pad both ways
+  const span = yMax - yMin;
+  yMin = yMin - span * 0.10;
+  yMax = yMax + span * 0.15;
+
+  const svg = document.getElementById('pnlChart');
+  svg.innerHTML = '';
+
+  // Helper element creator
+  const ns = 'http://www.w3.org/2000/svg';
+  const el = (tag, attrs, parent = svg, text = null) => {
+    const e = document.createElementNS(ns, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (text != null) e.textContent = text;
+    parent.appendChild(e);
+    return e;
+  };
+
+  // Grid: vertical lines at $100/$200/$300/$400/$500
+  const gridG = el('g', { class: 'grid' });
+  for (let v = 100; v <= 500; v += 100) {
+    el('line', { x1: xScale(v), x2: xScale(v), y1: PAD.top, y2: PAD.top + PLOT_H }, gridG);
+  }
+  // Horizontal grid lines at sensible y values
+  const yStep = niceStep(span / 4);
+  for (let v = Math.ceil(yMin / yStep) * yStep; v <= yMax; v += yStep) {
+    el('line', { x1: PAD.left, x2: PAD.left + PLOT_W, y1: yScale(v, yMin, yMax), y2: yScale(v, yMin, yMax) }, gridG);
+  }
+
+  // Zero line
+  if (yMin <= 0 && yMax >= 0) {
+    el('line', { x1: PAD.left, x2: PAD.left + PLOT_W, y1: yScale(0, yMin, yMax), y2: yScale(0, yMin, yMax), class: 'zero' });
+  }
+
+  // Profit/loss fill regions: separate green-ish and red-ish under/over zero
+  let pathProfit = '';
+  let pathLoss = '';
+  for (let i = 0; i < samples.length; i++) {
+    const s = samples[i];
+    const x = xScale(s.x);
+    const yPlot = yScale(s.y, yMin, yMax);
+    const yZero = yScale(0, yMin, yMax);
+    if (i === 0) {
+      pathProfit = `M ${x} ${yZero} L ${x} ${yPlot}`;
+      pathLoss   = `M ${x} ${yZero} L ${x} ${yPlot}`;
+    } else {
+      pathProfit += ` L ${x} ${yPlot}`;
+      pathLoss   += ` L ${x} ${yPlot}`;
+    }
+  }
+  const lastX = xScale(samples[samples.length - 1].x);
+  const yZero = yScale(0, yMin, yMax);
+  pathProfit += ` L ${lastX} ${yZero} Z`;
+  pathLoss   += ` L ${lastX} ${yZero} Z`;
+
+  // Use clipping rectangles to mask profit (above zero) vs loss (below zero)
+  const defs = el('defs', {});
+  el('clipPath', { id: 'aboveZero' }, defs);
+  el('rect', { x: PAD.left, y: PAD.top, width: PLOT_W, height: yZero - PAD.top }, defs.querySelector('clipPath'));
+  el('clipPath', { id: 'belowZero' }, defs);
+  el('rect', { x: PAD.left, y: yZero, width: PLOT_W, height: PAD.top + PLOT_H - yZero }, defs.querySelector('clipPath'));
+
+  el('path', { d: pathProfit, class: 'pnl-fill', fill: '#5BC76E', 'clip-path': 'url(#aboveZero)' });
+  el('path', { d: pathLoss,   class: 'pnl-fill', fill: COLORS.red, 'clip-path': 'url(#belowZero)' });
+
+  // P&L line
+  const linePath = samples.map((s, i) =>
+    `${i === 0 ? 'M' : 'L'} ${xScale(s.x)} ${yScale(s.y, yMin, yMax)}`
+  ).join(' ');
+  el('path', { d: linePath, class: 'pnl-line', stroke: strat.color });
+
+  // Axes
+  // X axis line
+  el('line', { x1: PAD.left, x2: PAD.left + PLOT_W, y1: PAD.top + PLOT_H, y2: PAD.top + PLOT_H, class: 'axis' });
+  // X labels
+  for (let v = 100; v <= 500; v += 100) {
+    el('text', {
+      x: xScale(v), y: PAD.top + PLOT_H + 18, 'text-anchor': 'middle',
+    }, svg, '$' + v);
+  }
+  // Y labels
+  for (let v = Math.ceil(yMin / yStep) * yStep; v <= yMax; v += yStep) {
+    if (Math.abs(v) < 1e-6) continue;
+    el('text', {
+      x: PAD.left - 8, y: yScale(v, yMin, yMax) + 4, 'text-anchor': 'end',
+    }, svg, (v > 0 ? '+$' : '−$') + Math.abs(v).toFixed(0));
+  }
+  // 0 label
+  el('text', {
+    x: PAD.left - 8, y: yScale(0, yMin, yMax) + 4, 'text-anchor': 'end',
+    'font-weight': '700', fill: COLORS.black,
+  }, svg, '$0');
+
+  // Axis labels
+  el('text', {
+    x: PAD.left + PLOT_W / 2, y: H - 6, 'text-anchor': 'middle',
+    'font-size': '10', 'letter-spacing': '0.18em', fill: '#767676',
+  }, svg, 'ADBE PRICE @ EXPIRY');
+
+  // Breakeven marker
+  const stats = strat.stats(params);
+  if (Number.isFinite(stats.breakeven)) {
+    const beX = xScale(stats.breakeven);
+    if (beX >= PAD.left && beX <= PAD.left + PLOT_W) {
+      el('line', { x1: beX, x2: beX, y1: PAD.top, y2: PAD.top + PLOT_H, class: 'marker-line' });
+      el('text', { x: beX, y: PAD.top - 8, 'text-anchor': 'middle', 'font-size': '10', 'letter-spacing': '0.16em', fill: '#111' }, svg, 'BE $' + stats.breakeven.toFixed(0));
+    }
+  }
+
+  // Current price marker (driven by slider)
+  const px = xScale(state.price);
+  const py = yScale(strat.pnl(state.price, params), yMin, yMax);
+  el('line', { x1: px, x2: px, y1: PAD.top, y2: PAD.top + PLOT_H, stroke: COLORS.black, 'stroke-width': 2 });
+  el('circle', { cx: px, cy: py, r: 7, fill: COLORS.white, stroke: COLORS.black, 'stroke-width': 3 });
+}
+
+/** Round step to a "nice" value (1, 2, 5 × 10^k). */
+function niceStep(raw) {
+  if (raw <= 0) return 1;
+  const exp = Math.floor(Math.log10(raw));
+  const base = raw / Math.pow(10, exp);
+  let nice;
+  if (base < 1.5) nice = 1;
+  else if (base < 3) nice = 2;
+  else if (base < 7) nice = 5;
+  else nice = 10;
+  return nice * Math.pow(10, exp);
+}
+
+/* =====================================================================
+ *   UI rendering
+ * ===================================================================== */
+
+function renderDetail() {
+  const strat = strategies[state.active];
+  const params = state.params[state.active];
+  const stats = strat.stats(params);
+
+  document.getElementById('detailName').textContent = strat.name;
+  document.getElementById('detailTagline').textContent = strat.tag;
+
+  document.getElementById('maxUp').textContent =
+    Number.isFinite(stats.maxUp) ? fmt$(stats.maxUp, {sign:true, dp:2}) : 'Unlimited';
+  document.getElementById('maxDown').textContent = fmt$(stats.maxDown, {sign:true, dp:2});
+  document.getElementById('breakeven').textContent = '$' + stats.breakeven.toFixed(2);
+  document.getElementById('timeHorizon').textContent = stats.time;
+
+  document.getElementById('detailDesc').innerHTML = strat.desc(params);
+  document.getElementById('whenFits').textContent = strat.whenFits;
+}
+
+function renderReadout() {
+  const strat = strategies[state.active];
+  const params = state.params[state.active];
+  const pnl = strat.pnl(state.price, params);
+
+  // Per contract: 1 contract = 100 shares.
+  const pnlContract = pnl * 100;
+
+  // Capital basis = upfront cash committed at trade entry, per contract.
+  //   1: net debit paid       (stats.maxDown = -debit)
+  //   2: LEAPS premium paid   (stats.maxDown = -premium)
+  //   3: $strike × 100 cash collateral
+  //   4: LEAPS premium paid (UPFRONT — collected income reduces this over time
+  //                          but we use the entry-day exposure as the basis)
+  const stats = strat.stats(params);
+  let basis;
+  let basisLabel;
+  if (state.active === '3') {
+    basis = params.strike * 100;
+    basisLabel = '$' + basis.toLocaleString() + ' cash collateral';
+  } else if (state.active === '4') {
+    basis = params.premium * 100;
+    basisLabel = '$' + basis.toLocaleString() + ' LEAPS premium';
+  } else {
+    basis = Math.abs(stats.maxDown * 100);
+    basisLabel = '$' + basis.toLocaleString() + ' premium paid';
+  }
+  const pct = basis > 0 ? (pnlContract / basis) * 100 : 0;
+
+  const v = document.getElementById('pnlValue');
+  v.textContent = fmt$(pnlContract, {sign:true, dp:0});
+  v.className = 'pnl-value ' + (pnl > 0.005 ? 'green' : pnl < -0.005 ? 'red' : 'neutral');
+
+  document.getElementById('pnlPct').textContent =
+    (pct === 0 ? '' : (pct > 0 ? '+' : '−') + Math.abs(pct).toFixed(0) + '% · ') +
+    'per contract · on ' + basisLabel;
+
+  document.getElementById('priceLabel').textContent = state.price;
+}
+
+function renderParams() {
+  const strat = strategies[state.active];
+  const params = state.params[state.active];
+  const grid = document.getElementById('paramGrid');
+  grid.innerHTML = '';
+  for (const f of strat.fields) {
+    const wrap = document.createElement('div');
+    wrap.className = 'param';
+    const lbl = document.createElement('label');
+    lbl.textContent = f.label;
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.value = params[f.key];
+    input.step = '1';
+    input.min = '0';
+    input.dataset.key = f.key;
+    input.addEventListener('input', () => {
+      const v = Number(input.value);
+      if (Number.isFinite(v) && v >= 0) {
+        state.params[state.active][f.key] = v;
+        renderAll();
+      }
+    });
+    wrap.appendChild(lbl);
+    wrap.appendChild(input);
+    grid.appendChild(wrap);
+  }
+}
+
+function renderTiles() {
+  document.querySelectorAll('.tile').forEach(t => {
+    t.classList.toggle('is-active', t.dataset.strategy === state.active);
+  });
+}
+
+function renderAll() {
+  renderTiles();
+  renderDetail();
+  renderReadout();
+  buildChart();
+}
+
+/* =====================================================================
+ *   Wiring
+ * ===================================================================== */
+
+document.querySelectorAll('.tile').forEach(t => {
+  t.addEventListener('click', () => {
+    state.active = t.dataset.strategy;
+    renderParams();
+    renderAll();
+  });
+});
+
+document.getElementById('priceSlider').addEventListener('input', (e) => {
+  state.price = Number(e.target.value);
+  renderReadout();
+  buildChart();
+});
+
+document.querySelectorAll('.scenario').forEach(s => {
+  s.addEventListener('click', () => {
+    const p = Number(s.dataset.price);
+    state.price = p;
+    document.getElementById('priceSlider').value = p;
+    renderReadout();
+    buildChart();
+  });
+});
+
+renderParams();
+renderAll();
+</script>
+</body>
+</html>
